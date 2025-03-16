@@ -1,8 +1,8 @@
 name: print_bartender
 description: "A new Flutter plugin for print by bartender"
-version: 0.0.1
-homepage: https://github.com/zhoutong131/bartender_print.git
-repository: https://github.com/zhoutong131/bartender_print.git
+version: 0.0.2
+homepage: https://github.com/zhoutong131/bartender_print/tree/master
+repository: https://github.com/zhoutong131/bartender_print/tree/master
 
 environment:
   sdk: ^3.7.0

@@ -17,7 +17,6 @@ cmake_policy(VERSION 3.14...3.25)
 set(PLUGIN_NAME "print_bartender_plugin")
 set(MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/bartender/bartender_print.dll")
 set(BARTENDER_PATH "${CMAKE_CURRENT_SOURCE_DIR}/bartender/Interop.BarTender.dll")
-
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
   "NativeStructs.h"
@@ -51,15 +50,22 @@ target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
 target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin)
-
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an
 # external build triggered from this build file.
+add_custom_command(
+    TARGET ${PLUGIN_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${BARTENDER_PATH}
+    "${CMAKE_BINARY_DIR}/runner/$<CONFIG>"
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${MAIN_PATH}
+    "${CMAKE_BINARY_DIR}/runner/$<CONFIG>"
+)
 set(print_bartender_bundled_libraries
   ""
   PARENT_SCOPE
 )
-
 # === Tests ===
 # These unit tests can be run from a terminal after building the example, or
 # from Visual Studio after opening the generated solution file.
@@ -97,14 +103,9 @@ add_custom_command(TARGET ${TEST_RUNNER} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
   "${FLUTTER_LIBRARY}" $<TARGET_FILE_DIR:${TEST_RUNNER}>
 )
-install(FILES
-    "${MAIN_PATH}"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}"
-)
-install(FILES
-    "${BARTENDER_PATH}"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}"
-)
+get_target_property(OUTPUT_DIR "${PLUGIN_NAME}" RUNTIME_OUTPUT_DIRECTORY_$<CONFIG>)
+
+
 # Enable automatic test discovery.
 include(GoogleTest)
 gtest_discover_tests(${TEST_RUNNER})
