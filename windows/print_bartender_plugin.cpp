@@ -1,3 +1,4 @@
+
 #include "print_bartender_plugin.h"
 #include"NativeStructs.h"
 // This must be included before many other Windows headers.
@@ -181,11 +182,18 @@ void PrintBartenderPlugin::HandleMethodCall(
           const flutter::EncodableList& list = std::get<flutter::EncodableList>(arg2_it->second);
           DictionaryList dlist = ConvertDartDataToNative(list);
           auto pName = params.find(flutter::EncodableValue("printerName"));
-          PrintResult pres = printLabel(btwPath.c_str(),(std::get<std::string>(pName->second)).c_str(), & dlist);
+          PrintResult pres;
+          if (pName != params.end()) {
+              pres = printLabel(btwPath.c_str(), (std::get<std::string>(pName->second)).c_str(), &dlist);
+          } else {
+              pres = printLabel(btwPath.c_str(), nullptr, &dlist);
+          }
+          
           FreeDictionaryList(&dlist);
           EncodableMap encodableMap;
           encodableMap[EncodableValue("info")] = EncodableValue(pres.info);
           encodableMap[EncodableValue("res")] = EncodableValue(pres.res);
+          //free(&pres);
           result->Success(EncodableValue(encodableMap));
           return;
       } else {
