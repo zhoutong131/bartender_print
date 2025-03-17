@@ -12,8 +12,20 @@ class MockPrintBartenderPlatform
   Future<String?> getPlatformVersion() => Future.value('42');
 
   @override
-  Future startPrint(String path, List<Map<String, String>> info) {
+  Future startPrint(String path,List<Map<String, String>> info,{String? printerName}) {
     // TODO: implement startPrint
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<String?> getDefaultPrinterName() {
+    // TODO: implement getDefaultPrinterName
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<String>?> getPrinterList() {
+    // TODO: implement getPrinterList
     throw UnimplementedError();
   }
 }

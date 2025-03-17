@@ -1,4 +1,4 @@
-# The Flutter tooling requires that developers have a version of Visual Studio
+﻿# The Flutter tooling requires that developers have a version of Visual Studio
 # installed that includes CMake 3.14 or later. You should not increase this
 # version, as doing so will cause the plugin to fail to compile for some
 # customers of the plugin.
@@ -53,15 +53,22 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin)
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an
 # external build triggered from this build file.
+
 add_custom_command(
-    TARGET ${PLUGIN_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-    ${BARTENDER_PATH}
-    "${CMAKE_BINARY_DIR}/runner/$<CONFIG>"
-    COMMAND ${CMAKE_COMMAND} -E copy
-    ${MAIN_PATH}
-    "${CMAKE_BINARY_DIR}/runner/$<CONFIG>"
+        TARGET ${PLUGIN_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/runner/$<CONFIG>"
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${BARTENDER_PATH}
+        "${CMAKE_BINARY_DIR}/runner/$<CONFIG>"
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${MAIN_PATH}
+        "${CMAKE_BINARY_DIR}/runner/$<CONFIG>"
 )
+if (MSVC)
+    # 添加 /utf-8 编译选项
+    add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+endif()
 set(print_bartender_bundled_libraries
   ""
   PARENT_SCOPE
@@ -103,9 +110,6 @@ add_custom_command(TARGET ${TEST_RUNNER} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
   "${FLUTTER_LIBRARY}" $<TARGET_FILE_DIR:${TEST_RUNNER}>
 )
-get_target_property(OUTPUT_DIR "${PLUGIN_NAME}" RUNTIME_OUTPUT_DIRECTORY_$<CONFIG>)
-
-
 # Enable automatic test discovery.
 include(GoogleTest)
 gtest_discover_tests(${TEST_RUNNER})

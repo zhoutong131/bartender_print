@@ -1,31 +1,27 @@
-#pragma once
+ï»¿#pragma once
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-    // µ¥¸ö¼üÖµ¶Ô
     struct NativeKeyValuePair {
         const char* key;
         const char* value;
     };
 
-    // µ¥¸ö map£¨×Öµä£©
     struct DictionaryDom {
-        NativeKeyValuePair* entries;  // ¼üÖµ¶ÔÊı×é
-        int count;              // ¼üÖµ¶ÔÊıÁ¿
+        NativeKeyValuePair* entries;
+        int count;
     };
 
-    // Íâ²ã vector£¨ÁĞ±í£©
     struct DictionaryList {
-        DictionaryDom* dictionaries;  // ×ÖµäÊı×é
-        int count;                 // ×ÖµäÊıÁ¿
+        DictionaryDom* dictionaries;
+        int count;
     };
     struct PrintResult {
         const char* info;
         bool res;
     };
-    // º¯ÊıÖ¸ÕëÀàĞÍ¶¨Òå
     typedef void(__cdecl* ProcessDataFunc)(const DictionaryList* data);
 
 #ifdef __cplusplus

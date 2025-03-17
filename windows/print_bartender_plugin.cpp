@@ -17,9 +17,9 @@ using flutter::EncodableMap;
 using flutter::EncodableValue;
 
 namespace print_bartender {
-typedef PrintResult(*PrintFunction)(const char*, const DictionaryList*);
+typedef PrintResult(*PrintFunction)(const char*, const char*, const DictionaryList*);
 
-PrintResult printLabel(const char* path, const DictionaryList* info) {
+PrintResult printLabel(const char* path,const char* printerName, const DictionaryList* info) {
     HINSTANCE hDll = LoadLibrary(L"bartender_print.dll");
     PrintResult resInfo = {};
     resInfo.res = true;
@@ -30,7 +30,6 @@ PrintResult printLabel(const char* path, const DictionaryList* info) {
         resInfo.info = "Failed to load Bartender DLL";
         return resInfo;
     }
-    // »ñÈ¡º¯ÊıµØÖ·
     PrintFunction printInfo = (PrintFunction)GetProcAddress(hDll, "printByBartender");
     if (printInfo == NULL) {
         std::cerr << "Failed to get function address." << std::endl;
@@ -39,7 +38,7 @@ PrintResult printLabel(const char* path, const DictionaryList* info) {
         FreeLibrary(hDll);
         return resInfo;
     }
-    resInfo = printInfo(path, info);
+    resInfo = printInfo(path,printerName, info);
     FreeLibrary(hDll);
     return resInfo;
 }
@@ -50,7 +49,7 @@ void FreeDictionaryList(DictionaryList* list) {
     for (int i = 0; i < list->count; ++i) {
         DictionaryDom& dict = list->dictionaries[i];
         for (int j = 0; j < dict.count; ++j) {
-            free(const_cast<char*>(dict.entries[j].key));  // ÊÍ·ÅstrdupÄÚ´æ
+            free(const_cast<char*>(dict.entries[j].key));
             free(const_cast<char*>(dict.entries[j].value));
         }
         delete[] dict.entries;
@@ -78,7 +77,6 @@ DictionaryList ConvertDartDataToNative(const flutter::EncodableList& dartData) {
             nativeDict.entries[j].key = _strdup(key.c_str());
             nativeDict.entries[j].value = _strdup(value.c_str());
             if (!nativeDict.entries[j].key || !nativeDict.entries[j].value) {
-                // ´íÎó´¦Àí£ºÊÍ·ÅÒÑ·ÖÅäµÄÄÚ´æ
                 FreeDictionaryList(&nativeList);
                 throw std::bad_alloc();
             }
@@ -106,6 +104,43 @@ void PrintBartenderPlugin::RegisterWithRegistrar(
   registrar->AddPlugin(std::move(plugin));
 }
 
+flutter::EncodableValue WideStringToEncodable(const std::wstring& wstr) {
+    if (wstr.empty()) {
+        return flutter::EncodableValue(""); // è¿”å›ç©ºå­—ç¬¦ä¸²
+    }
+
+    // è®¡ç®—è½¬æ¢å UTF-8 å­—ç¬¦ä¸²æ‰€éœ€çš„ç¼“å†²åŒºå¤§å°
+    int utf8_size = WideCharToMultiByte(
+        CP_UTF8,            // ç›®æ ‡ç¼–ç ä¸º UTF-8
+        0,                  // æ— ç‰¹æ®Šæ ‡å¿—
+        wstr.c_str(),       // è¾“å…¥å®½å­—ç¬¦ä¸²
+        -1,                 // è‡ªåŠ¨è®¡ç®—é•¿åº¦ï¼ˆåŒ…æ‹¬ç»ˆæ­¢ç¬¦ï¼‰
+        nullptr,            // ä¸æ¥æ”¶è¾“å‡ºï¼ˆä»…è®¡ç®—å¤§å°ï¼‰
+        0,                  // è¾“å‡ºç¼“å†²åŒºå¤§å°ä¸º0
+        nullptr, nullptr    // é»˜è®¤å¤„ç†ä¸å¯è½¬æ¢å­—ç¬¦
+    );
+
+    if (utf8_size == 0) {
+        // è½¬æ¢å¤±è´¥ï¼Œè¿”å›ç©ºæˆ–æŠ›å‡ºå¼‚å¸¸
+        DWORD error = GetLastError();
+        // å¤„ç†é”™è¯¯ï¼Œä¾‹å¦‚è¾“å‡ºæ—¥å¿—
+        return flutter::EncodableValue("");
+    }
+
+    // åˆ†é…ç¼“å†²åŒºå¹¶å®é™…è½¬æ¢
+    std::string utf8_str(utf8_size, 0);
+    WideCharToMultiByte(
+        CP_UTF8, 0, wstr.c_str(), -1,
+        utf8_str.data(), utf8_size,
+        nullptr, nullptr
+    );
+
+    // ç§»é™¤è½¬æ¢åå¯èƒ½çš„å¤šä½™ç»ˆæ­¢ç¬¦
+    utf8_str.resize(utf8_size - 1);
+
+    // å°è£…ä¸º EncodableValue
+    return flutter::EncodableValue(utf8_str);
+}
 PrintBartenderPlugin::PrintBartenderPlugin() {}
 
 PrintBartenderPlugin::~PrintBartenderPlugin() {}
@@ -125,44 +160,90 @@ void PrintBartenderPlugin::HandleMethodCall(
     }
     result->Success(flutter::EncodableValue(version_stream.str()));
   } else if (method_call.method_name().compare("printLabel") == 0) {
-      // µ÷Æğbartender´òÓ¡
-      // »ñÈ¡²ÎÊı£¨¼ÙÉè²ÎÊıÊÇµ¥¸ö Map£©
       //const auto* arguments = std::get_if<flutter::EncodableMap>(method_call.arguments());
       const flutter::EncodableValue* arguments = method_call.arguments();
-      // ¼ì²é²ÎÊıÊÇ·ñÎª Map
       if (!arguments || !std::holds_alternative<flutter::EncodableMap>(*arguments)) {
-          result->Error("INVALID_ARGUMENT", "²ÎÊı±ØĞëÊÇ Map");
+          result->Error("INVALID_ARGUMENT", "INVALID_ARGUMENT");
           return;
       }
-
-      // ÌáÈ¡ Map
       const flutter::EncodableMap& params = std::get<flutter::EncodableMap>(*arguments);
-      // ÌáÈ¡ arg1£¨×Ö·û´®£©
       auto arg1_it = params.find(flutter::EncodableValue("btwPath"));
       std::string btwPath;
       if (arg1_it != params.end() &&
           std::holds_alternative<std::string>(arg1_it->second)) {
           btwPath = std::get<std::string>(arg1_it->second);
       } else {
-          result->Error("INVALID_BTW_PATH", "²ÎÊıÎ´°üº¬btwPath");
+          result->Error("INVALID_BTW_PATH", "INVALID_BTW_PATH");
           return;
       }
-      // ÌáÈ¡ arg2£¨List<Map<String, String>>£©
       auto arg2_it = params.find(flutter::EncodableValue("info"));
       if (arg2_it != params.end() && std::holds_alternative<flutter::EncodableList>(arg2_it->second)) {
           const flutter::EncodableList& list = std::get<flutter::EncodableList>(arg2_it->second);
           DictionaryList dlist = ConvertDartDataToNative(list);
-          PrintResult pres = printLabel(btwPath.c_str(), &dlist);
-          FreeDictionaryList(&dlist); //  ÊÍ·ÅÄÚ´æ
+          auto pName = params.find(flutter::EncodableValue("printerName"));
+          PrintResult pres = printLabel(btwPath.c_str(),(std::get<std::string>(pName->second)).c_str(), & dlist);
+          FreeDictionaryList(&dlist);
           EncodableMap encodableMap;
           encodableMap[EncodableValue("info")] = EncodableValue(pres.info);
           encodableMap[EncodableValue("res")] = EncodableValue(pres.res);
           result->Success(EncodableValue(encodableMap));
           return;
       } else {
-          result->Error("INVALID_INFO", "²ÎÊıÎ´°üº¬info");
+          result->Error("INVALID_INFO", "INVALID_INFO");
           return;
       }
+  } else if (method_call.method_name().compare("getPrintList") == 0) {
+      // æšä¸¾å·²è¿æ¥çš„æ‰“å°æœº
+      DWORD needed = 0, returned = 0;
+      BOOL printResult = EnumPrinters(
+          PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS, // æšä¸¾æœ¬åœ°å’Œç½‘ç»œæ‰“å°æœº
+          nullptr, 4, nullptr, 0, &needed, &returned
+      );
+
+      std::vector<BYTE> buffer;
+      if (!printResult) {
+          DWORD error = GetLastError();
+          if (error != ERROR_INSUFFICIENT_BUFFER) {
+              std::cerr << "EnumPrinters å¤±è´¥ã€‚é”™è¯¯ä»£ç : " << error << std::endl;
+              return;
+          }
+          buffer.resize(needed);
+          if (!EnumPrinters(
+              PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
+              nullptr, 4, buffer.data(), needed, &needed, &returned
+          )) {
+              std::cerr << "EnumPrinters å¤±è´¥ã€‚é”™è¯¯ä»£ç : " << GetLastError() << std::endl;
+              return;
+          }
+      }
+
+      PRINTER_INFO_4* printers = reinterpret_cast<PRINTER_INFO_4*>(buffer.data());
+      EncodableList printList;
+      for (DWORD i = 0; i < returned; ++i) {
+          std::wstring name = printers[i].pPrinterName ? printers[i].pPrinterName : L"";
+          printList.push_back(EncodableValue(WideStringToEncodable(name)));
+      }
+      result->Success(EncodableValue(printList));
+  }
+  else if (method_call.method_name().compare("getDefaultPrinter") == 0) {
+      // è·å–é»˜è®¤æ‰“å°æœº
+      DWORD size = 0;
+      BOOL lastResult = GetDefaultPrinter(nullptr, &size);
+      if (!result) {
+          DWORD error = GetLastError();
+          if (error != ERROR_INSUFFICIENT_BUFFER) {
+              std::cerr << "æœªè®¾ç½®é»˜è®¤æ‰“å°æœº"  << std::endl;
+              return ;
+          }
+      }
+
+      std::vector<wchar_t> defaultPrinter(size);
+      if (!GetDefaultPrinter(defaultPrinter.data(), &size)) {
+          std::cerr << "è·å–é»˜è®¤æ‰“å°æœºå¤±è´¥ã€‚é”™è¯¯ä»£ç : " << GetLastError() << std::endl;
+          return ;
+      }
+      result->Success(EncodableValue(WideStringToEncodable(defaultPrinter.data())));
+      return;
   } else {
     result->NotImplemented();
   }

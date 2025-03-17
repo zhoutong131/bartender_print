@@ -21,15 +21,19 @@ class MethodChannelPrintBartender extends PrintBartenderPlatform {
   void startBackground (Map<String,dynamic> data) async {
     SendPort s = data['send'];
     BackgroundIsolateBinaryMessenger.ensureInitialized(data['instance'] as RootIsolateToken);
-    final result = await methodChannel.invokeMethod<Map>("printLabel",{
+    var transferInfo = {
       "btwPath": data['path'],
       "info": (data['info'] as List<dynamic>).map((ele) => (ele as Map<String,String>)).toList()
-    });
+    };
+    if (data['printerName'] != null && data['printerName'].toString().isNotEmpty) {
+      transferInfo['printerName'] = data['printerName'];
+    }
+    final result = await methodChannel.invokeMethod<Map>("printLabel",transferInfo);
     s.send(result);
   }
 
   @override
-  Future startPrint(String path, List<Map<String, String>> info) async {
+  Future startPrint(String path, List<Map<String, String>> info,{String? printerName}) async {
     // TODO: implement startPrint
     if (path.isEmpty) {
       return {
@@ -56,12 +60,27 @@ class MethodChannelPrintBartender extends PrintBartenderPlatform {
       "send": receivePort.sendPort,
       "instance": RootIsolateToken.instance!,
       "path": path,
-      "info": info
+      "info": info,
+      "printerName": printerName
     });
     var resInfo = await receivePort.first;
     backgroundTask.kill(priority: Isolate.immediate);
     receivePort.close();
     return resInfo;
+  }
+
+  @override
+  Future<String?> getDefaultPrinterName() async {
+    // TODO: implement getDefaultPrinterName
+    final result = await methodChannel.invokeMethod<String?>("getDefaultPrinter");
+    return result;
+  }
+
+  @override
+  Future<List<String>?> getPrinterList() async {
+    // TODO: implement getPrinterList
+    final result = await methodChannel.invokeListMethod<String>("getPrintList");
+    return result;
   }
 
 

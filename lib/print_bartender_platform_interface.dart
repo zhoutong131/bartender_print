@@ -27,7 +27,15 @@ abstract class PrintBartenderPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
-  Future startPrint(String path,List<Map<String,String>> info) {
+  Future startPrint(String path,List<Map<String,String>> info,{String? printerName}) {
     throw UnimplementedError('startPrint() has not been implemented.');
+  }
+
+  Future<String?> getDefaultPrinterName() {
+    throw UnimplementedError('getDefaultPrinterName() has not been implemented.');
+  }
+
+  Future<List<String>?> getPrinterList () {
+    throw UnimplementedError('getPrinterList() has not been implemented.');
   }
 }

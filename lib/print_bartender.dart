@@ -6,7 +6,15 @@ class PrintBartender {
     return PrintBartenderPlatform.instance.getPlatformVersion();
   }
 
-  Future startPrint(String path,List<Map<String,String>> info) {
-    return PrintBartenderPlatform.instance.startPrint(path, info);
+  Future startPrint(String path,List<Map<String,String>> info,{String? printerName}) {
+    return PrintBartenderPlatform.instance.startPrint(path, info,printerName: printerName);
+  }
+
+  Future<String?> getDefaultPrinterName () {
+    return PrintBartenderPlatform.instance.getDefaultPrinterName();
+  }
+
+  Future<List<String>?> getPrinterList () {
+    return PrintBartenderPlatform.instance.getPrinterList();
   }
 }

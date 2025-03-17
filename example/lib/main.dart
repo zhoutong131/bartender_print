@@ -61,13 +61,18 @@ class _MyAppState extends State<MyApp> {
               ElevatedButton(
                 onPressed: () async {
                   // 开始打印
+                  debugPrint((await PrintBartender().getPrinterList()).toString());
+                  return;
                   var res = await PrintBartender().startPrint("D://work//test.btw", [{
-                    "CSN": "987kjnhs76f"
+                    "CSN": "987kjnhs76f",
+                    "UFO": "ldlo0987"
                   },{
-                    "CSN": "678kjnhs76f"
+                    "CSN": "678kjnhs76f",
+                    "UFO": "ldlo0987"
                   },{
-                    "CSN": "578kjnhs76f"
-                  }]);
+                    "CSN": "578kjnhs76f",
+                    "UFO": "ldlo0987"
+                  }],printerName: "sss");
                   debugPrint(res['info']);
                 },
                 child: Text("打印")
