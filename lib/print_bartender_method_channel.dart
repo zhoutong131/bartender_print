@@ -23,7 +23,7 @@ class MethodChannelPrintBartender extends PrintBartenderPlatform {
     BackgroundIsolateBinaryMessenger.ensureInitialized(data['instance'] as RootIsolateToken);
     var transferInfo = {
       "btwPath": data['path'],
-      "info": (data['info'] as List<dynamic>).map((ele) => (ele as Map<String,String>)).toList()
+      "info": data['info']
     };
     if (data['printerName'] != null && data['printerName'].toString().isNotEmpty) {
       transferInfo['printerName'] = data['printerName'];
@@ -33,7 +33,7 @@ class MethodChannelPrintBartender extends PrintBartenderPlatform {
   }
 
   @override
-  Future startPrint(String path, List<Map<String, String>> info,{String? printerName}) async {
+  Future startPrint(String path, String info,{String? printerName}) async {
     // TODO: implement startPrint
     if (path.isEmpty) {
       return {

@@ -22,7 +22,7 @@ extern "C" {
         const char* info;
         bool res;
     };
-    typedef void(__cdecl* ProcessDataFunc)(const DictionaryList* data);
+    //typedef void(__cdecl* ProcessDataFunc)(const DictionaryList* data);
 
 #ifdef __cplusplus
 }

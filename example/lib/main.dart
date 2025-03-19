@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 
@@ -60,30 +62,17 @@ class _MyAppState extends State<MyApp> {
               Text('Running on: $_platformVersion\n'),
               ElevatedButton(
                 onPressed: () async {
-                  // 开始打印
-                  await PrintBartender().startPrint("D:/work/test.btw", [{
-                    "cName": "你是小日本妞",
+                  print(await PrintBartender().getDefaultPrinterName());
+                  return;
+                  var res = await PrintBartender().startPrint("D:/work/test.btw", json.encode([{
+                    "cName": "你是日本妞",
                     "CSN":"123ijuhnd89",
                     "UFO":"sssasw09"
                   },{
                     "cName": "我是中国热",
                     "CSN":"oouijuhnd89",
                     "UFO":"887asw09"
-                  }]);
-                  return;
-                  debugPrint((await PrintBartender().getPrinterList()).toString());
-                  return;
-                  var res = await PrintBartender().startPrint("D://work//test.btw", [{
-                    "CSN": "987kjnhs76f",
-                    "UFO": "ldlo0987"
-                  },{
-                    "CSN": "678kjnhs76f",
-                    "UFO": "ldlo0987"
-                  },{
-                    "CSN": "578kjnhs76f",
-                    "UFO": "ldlo0987"
-                  }],printerName: "sss");
-                  debugPrint(res['info']);
+                  }]));
                 },
                 child: Text("打印")
               )

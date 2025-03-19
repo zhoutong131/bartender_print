@@ -6,7 +6,7 @@ class PrintBartender {
     return PrintBartenderPlatform.instance.getPlatformVersion();
   }
 
-  Future startPrint(String path,List<Map<String,String>> info,{String? printerName}) {
+  Future startPrint(String path,String info,{String? printerName}) {
     return PrintBartenderPlatform.instance.startPrint(path, info,printerName: printerName);
   }
 

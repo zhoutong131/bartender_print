@@ -1,4 +1,4 @@
-
+﻿
 #include "print_bartender_plugin.h"
 #include"NativeStructs.h"
 // This must be included before many other Windows headers.
@@ -18,9 +18,9 @@ using flutter::EncodableMap;
 using flutter::EncodableValue;
 
 namespace print_bartender {
-typedef PrintResult(*PrintFunction)(const char*, const char*, const DictionaryList*);
+typedef PrintResult(*PrintFunction)(const char*, const char*, const char*);
 
-PrintResult printLabel(const char* path,const char* printerName, const DictionaryList* info) {
+PrintResult printLabel(const char* path,const char* printerName, const char* info) {
     HINSTANCE hDll = LoadLibrary(L"bartender_print.dll");
     PrintResult resInfo = {};
     resInfo.res = true;
@@ -44,48 +44,6 @@ PrintResult printLabel(const char* path,const char* printerName, const Dictionar
     return resInfo;
 }
 
-void FreeDictionaryList(DictionaryList* list) {
-    if (!list) return;
-
-    for (int i = 0; i < list->count; ++i) {
-        DictionaryDom& dict = list->dictionaries[i];
-        for (int j = 0; j < dict.count; ++j) {
-            free(const_cast<char*>(dict.entries[j].key));
-            free(const_cast<char*>(dict.entries[j].value));
-        }
-        delete[] dict.entries;
-    }
-    delete[] list->dictionaries;
-    list->dictionaries = nullptr;
-    list->count = 0;
-}
-
-DictionaryList ConvertDartDataToNative(const flutter::EncodableList& dartData) {
-    DictionaryList nativeList{};
-    nativeList.count = static_cast<int>(dartData.size());
-    nativeList.dictionaries = new DictionaryDom[nativeList.count];
-
-    for (size_t i = 0; i < dartData.size(); ++i) {
-        const auto& dartMap = std::get<flutter::EncodableMap>(dartData[i]);
-        DictionaryDom& nativeDict = nativeList.dictionaries[i];
-        nativeDict.count = static_cast<int>(dartMap.size());
-        nativeDict.entries = new NativeKeyValuePair[nativeDict.count];
-
-        int j = 0;
-        for (const auto& pair : dartMap) {
-            std::string key = std::get<std::string>(pair.first);
-            std::string value = std::get<std::string>(pair.second);
-            nativeDict.entries[j].key = _strdup(key.c_str());
-            nativeDict.entries[j].value = _strdup(value.c_str());
-            if (!nativeDict.entries[j].key || !nativeDict.entries[j].value) {
-                FreeDictionaryList(&nativeList);
-                throw std::bad_alloc();
-            }
-            ++j;
-        }
-    }
-    return nativeList;
-}
 
 // static
 void PrintBartenderPlugin::RegisterWithRegistrar(
@@ -125,7 +83,7 @@ flutter::EncodableValue WideStringToEncodable(const std::wstring& wstr) {
         // 转换失败，返回空或抛出异常
         DWORD error = GetLastError();
         // 处理错误，例如输出日志
-        return flutter::EncodableValue("");
+        return flutter::EncodableValue(std::to_string(error));
     }
 
     // 分配缓冲区并实际转换
@@ -178,18 +136,15 @@ void PrintBartenderPlugin::HandleMethodCall(
           return;
       }
       auto arg2_it = params.find(flutter::EncodableValue("info"));
-      if (arg2_it != params.end() && std::holds_alternative<flutter::EncodableList>(arg2_it->second)) {
-          const flutter::EncodableList& list = std::get<flutter::EncodableList>(arg2_it->second);
-          DictionaryList dlist = ConvertDartDataToNative(list);
+      if (arg2_it != params.end()) {
+          std::string printInfo = (std::get<std::string>(arg2_it->second));
           auto pName = params.find(flutter::EncodableValue("printerName"));
           PrintResult pres;
           if (pName != params.end()) {
-              pres = printLabel(btwPath.c_str(), (std::get<std::string>(pName->second)).c_str(), &dlist);
+              pres = printLabel(btwPath.c_str(), (std::get<std::string>(pName->second)).c_str(), printInfo.c_str());
           } else {
-              pres = printLabel(btwPath.c_str(), nullptr, &dlist);
+              pres = printLabel(btwPath.c_str(), nullptr, printInfo.c_str());
           }
-          
-          FreeDictionaryList(&dlist);
           EncodableMap encodableMap;
           encodableMap[EncodableValue("info")] = EncodableValue(pres.info);
           encodableMap[EncodableValue("res")] = EncodableValue(pres.res);
@@ -237,7 +192,7 @@ void PrintBartenderPlugin::HandleMethodCall(
       // 获取默认打印机
       DWORD size = 0;
       BOOL lastResult = GetDefaultPrinter(nullptr, &size);
-      if (!result) {
+      if (!lastResult) {
           DWORD error = GetLastError();
           if (error != ERROR_INSUFFICIENT_BUFFER) {
               std::cerr << "未设置默认打印机"  << std::endl;
